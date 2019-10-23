@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 
@@ -15,6 +16,7 @@ namespace CompatCheckAndMigrate.Controls
     public partial class SendFeedbackControl : UserControl, IWizardStep
     {
         private IISServers IISServers;
+        public IISServer Server { get; private set; }
         private const int MaxBufferLength = 8000;
         private StringBuilder ErrorBuffer;
 
@@ -32,6 +34,7 @@ namespace CompatCheckAndMigrate.Controls
             if (state != null)
             {
                 this.IISServers = (IISServers)state;
+                this.Server = (IISServer)state;
             }
 
             long builderLength = 0;
@@ -76,6 +79,36 @@ namespace CompatCheckAndMigrate.Controls
                         {
                             ErrorBuffer.AppendLine(dbTrace);
                         }
+            foreach(Site website in Server.Sites.Where(s => s.PublishProfile != null && !string.IsNullOrEmpty(s.SiteCreationError)))
+            {
+                ErrorBuffer.AppendFormat("Site: {0} creation failed. {1}\r\n", website.SiteName, website.SiteCreationError);
+            }
+
+            foreach (Site website in Server.Sites.Where(s => s.PublishProfile != null && (!s.ContentPublishState || !s.DbPublishState)))
+            {
+                if (ErrorBuffer.Length < MaxBufferLength)
+                {
+                    string contentTrace = string.Empty;
+                    string dbTrace = string.Empty;
+
+                    if (File.Exists(website.PublishProfile.ContentTraceFile))
+                    {
+                        contentTrace = File.ReadAllText(website.PublishProfile.ContentTraceFile).Replace("<", " ").Replace(">", " ");
+                    }
+
+                    if (builderLength + contentTrace.Length <= MaxBufferLength)
+                    {
+                        ErrorBuffer.AppendLine(contentTrace);
+                    }
+
+                    if (File.Exists(website.PublishProfile.DbTraceFile))
+                    {
+                        dbTrace = File.ReadAllText(website.PublishProfile.DbTraceFile).Replace("<", " ").Replace(">", " ");
+                    }
+
+                    if (builderLength + dbTrace.Length <= MaxBufferLength)
+                    {
+                        ErrorBuffer.AppendLine(dbTrace);
                     }
                 }
             }
@@ -149,6 +182,7 @@ namespace CompatCheckAndMigrate.Controls
         private void btnBack_Click(object sender, EventArgs e)
         {
             FireGoToEvent(WizardSteps.ContentAndDbMigration, this.IISServers, true);
+            FireGoToEvent(WizardSteps.ContentAndDbMigration, this.Server, true);
         }
     }
 }

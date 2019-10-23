@@ -11,6 +11,10 @@ set Version=1.6.0.0
 set Name=CompatCheckAndMigrate
 set Product=Azure Websites Migration Assistant
 set Publisher="Microsoft"
+set Version=1.4.0.0
+set Name=CompatCheckAndMigrate
+set Product=Azure Websites Migration Assistant
+set Publisher="MS Open Tech"
 set PublishingLocation=https://www.movemetothecloud.net
 set SupportURL=https://www.movemetothecloud.net
 set Tools="C:\Program Files (x86)\Microsoft SDKs\Windows\v8.0A\bin\NETFX 4.0 Tools"
@@ -30,6 +34,7 @@ echo 3. Copy all of your application files to the version subdirectory, includin
 xcopy %Name%.exe %Name%\%Version% /y
 xcopy %Name%.exe.config %Name%\%Version% /y
 rem xcopy *.dll %Name%\%Version% /y
+xcopy *.dll %Name%\%Version% /y
 
 echo 4. Create the application manifest with a call to Mage.exe. The following statement creates an application manifest for code compiled to run on the Intel x86 processor.
 pushd %Name%\%Version%
@@ -55,6 +60,7 @@ popd
 
 echo 6. Generate the deployment manifest with a call to Mage.exe. By default, Mage.exe will mark your ClickOnce deployment as an installed application, so that it can be run both online and offline. To make the application available only when the user is online, use the -Install option with a value of false. If you use the default, and users will install your application from a Web site or file share, make sure that the value of the -ProviderUrl option points to the location of the application manifest on the Web server or share.
 %Mage% -New Deployment -Processor msil -Install true -Publisher %Publisher% -SupportURL "%SupportURL%" -ProviderUrl "%PublishingLocation%/%Name%.application" -AppManifest "%Name%\%Version%\%Name%.exe.manifest" -ToFile "%Name%.application" -Version %Version%
+%Mage% -New Deployment -Processor msil -Install true -Publisher %Publisher% -SupportURL "%SupportURL%" -ProviderUrl "%PublishingLocation%/%Name%.application" -AppManifest "%Name%\%Version%\%Name%.exe.manifest" -ToFile "%Name%.application"
 	
 echo 7. Replace strings
 echo 7.1. Add mapFileExtensions
@@ -75,6 +81,7 @@ if "%Update%"=="0" (
 ) else (
 rem #  -CertFile %CertPath%
 	%Mage% -Update "%Name%.application" -AppManifest "%Name%\%Version%\%Name%.exe.manifest" -Version %Version% -Publisher %Publisher%
+	%Mage% -Update "%Name%.application" -AppManifest "%Name%\%Version%\%Name%.exe.manifest" -CertFile %CertPath% -Version %Version% -Publisher %Publisher%
 )
 
 echo 9. Copy .application file to version folder (optionally)

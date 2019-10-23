@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 using System;
@@ -131,6 +132,23 @@ namespace CompatCheckAndMigrate.Helpers
                                 TraceHelper.Tracer.WriteTrace(message);
                                 MessageBox.Show(messageWithConnectionString);
                             }
+                                site.Add(new Database(providerName, name, dbConnectionString));
+                                continue;
+                            }
+
+                            var builder = new SqlConnectionStringBuilder(dbConnectionString);
+                            if (!string.IsNullOrEmpty(builder.AttachDBFilename) && name == "LocalSqlServer")
+                            {
+                                // we ignore this since it is MOST LIKELY the default values from the machine.config connection string from .NET framework
+                                continue;
+                            }
+
+                            if (!string.IsNullOrEmpty(remoteComputerName))
+                            {
+                                builder.DataSource = SetAppropriateServerName(builder.DataSource, remoteComputerName);
+                            }
+
+                            site.Add(new Database(providerName, name, builder.ConnectionString));
                         }
                     }
                 }
@@ -139,6 +157,7 @@ namespace CompatCheckAndMigrate.Helpers
             {
                 site.Errors.Add(ex.Message);
                 TraceHelper.Tracer.WriteTrace(ex.ToString());
+                // MessageBox.Show(ex.ToString());
             }
         }
     }

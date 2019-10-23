@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -21,6 +21,7 @@ namespace CompatCheckAndMigrate.Controls
         public void SetState(object state, bool isNavigatingBack = false)
         {
             TraceHelper.Tracer.WriteTrace("in set state remote");
+            MainForm.WriteTrace("in set state remote");
             // select local by default
             radioLocal.Select();
             radioLocal.Checked = true;

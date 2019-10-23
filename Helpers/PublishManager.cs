@@ -1,4 +1,4 @@
-﻿//------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // <copyright file="PublishManager.cs" company="Microsoft">
 //     Copyright (c) Microsoft Corporation. All rights reserved.
 // </copyright>
@@ -34,12 +34,18 @@ namespace CompatCheckAndMigrate.Helpers
             _completedOperations = new Queue<PublishOperation>();
             _totalOperations = 0;
             TraceHelper.Tracer.WriteTrace("Max Threads is {0}", Helper.MaxConcurrentThreads);
+            MainForm.WriteTrace("Initializing PublishManager");
+            _pendingPublishOperations = new Queue<PublishOperation>();
+            _completedOperations = new Queue<PublishOperation>();
+            _totalOperations = 0;
+            MainForm.WriteTrace("Max Threads is {0}", Helper.MaxConcurrentThreads);
             ThreadPool.SetMaxThreads(Helper.MaxConcurrentThreads, Helper.MaxConcurrentThreads);
         }
 
         internal void Enqueue(PublishOperation operation)
         {
             TraceHelper.Tracer.WriteTrace("Enqueueing {0}", operation.LocalSite.SiteName);
+            MainForm.WriteTrace("Enqueueing {0}", operation.LocalSite.SiteName);
             // no contention since enqueueing happens before processing has started
             _pendingPublishOperations.Enqueue(operation);
         }
@@ -48,6 +54,7 @@ namespace CompatCheckAndMigrate.Helpers
         {
             _totalOperations = _pendingPublishOperations.Count;
             TraceHelper.Tracer.WriteTrace("Total Operations at start: {0}", _totalOperations);
+            MainForm.WriteTrace("Total Operations at start: {0}", _totalOperations);
             _controllerThread = new Thread(Controller);
             _controllerThread.Start();
         }
@@ -57,6 +64,7 @@ namespace CompatCheckAndMigrate.Helpers
             while (_completedOperations.Count < _totalOperations)
             {
                 TraceHelper.Tracer.WriteTrace("Waiting for operations to complete. Total Operations: {0}, Completed Operations: {1}", _totalOperations, _completedOperations.Count);
+                MainForm.WriteTrace("Waiting for operations to complete. Total Operations: {0}, Completed Operations: {1}", _totalOperations, _completedOperations.Count);
                 Thread.Sleep(1000);
             }
 
@@ -67,11 +75,16 @@ namespace CompatCheckAndMigrate.Helpers
                 if (operation is PublishContentOperation)
                 {
                     TraceHelper.Tracer.WriteTrace("Setting content status {0} for {1}", operation.PublishStatus, operation.LocalSite.SiteName);
+                MainForm.WriteTrace("Checking status for {0}", operation.LocalSite.SiteName);
+                if (operation is PublishContentOperation)
+                {
+                    MainForm.WriteTrace("Setting content status {0} for {1}", operation.PublishStatus, operation.LocalSite.SiteName);
                     operation.LocalSite.ContentPublishState = operation.PublishStatus;
                 }
                 else
                 {
                     TraceHelper.Tracer.WriteTrace("Setting db status {0} for {1}", operation.PublishStatus, operation.LocalSite.SiteName);
+                    MainForm.WriteTrace("Setting db status {0} for {1}", operation.PublishStatus, operation.LocalSite.SiteName);
                     operation.LocalSite.DbPublishState = operation.PublishStatus;
                 }
 
@@ -88,11 +101,13 @@ namespace CompatCheckAndMigrate.Helpers
                 if (operation is PublishContentOperation)
                 {
                     TraceHelper.Tracer.WriteTrace("Scheduling content for: {0}", operation.LocalSite.SiteName);
+                    MainForm.WriteTrace("Scheduling content for: {0}", operation.LocalSite.SiteName);
                     ThreadPool.QueueUserWorkItem(new WaitCallback(PublishContent), operation);
                 }
                 else if (operation is PublishDbOperation)
                 {
                     TraceHelper.Tracer.WriteTrace("Scheduling db for: {0}", operation.LocalSite.SiteName);
+                    MainForm.WriteTrace("Scheduling db for: {0}", operation.LocalSite.SiteName);
                     ThreadPool.QueueUserWorkItem(new WaitCallback(PublishDatabase), operation);
                 }
             }
@@ -104,6 +119,7 @@ namespace CompatCheckAndMigrate.Helpers
             if (operation == null)
             {
                 TraceHelper.Tracer.WriteTrace("Publish: Thread {0} did not find any operations to process although got scheduled", Thread.CurrentThread.ManagedThreadId);
+                MainForm.WriteTrace("Publish: Thread {0} did not find any operations to process although got scheduled", Thread.CurrentThread.ManagedThreadId);
                 return;
             }
 
@@ -114,6 +130,11 @@ namespace CompatCheckAndMigrate.Helpers
                 {
                     // set size succeeded. The source and destination are valid. Start actual sync
                     operation.LogTrace("Starting actual publish for: {0} in Thread {1}", operation.LocalSite.SiteName, Thread.CurrentThread.ManagedThreadId);
+                MainForm.WriteTrace("Starting calculation for: {0} in Thread {1}", operation.LocalSite.SiteName, Thread.CurrentThread.ManagedThreadId);
+                if (operation.Publish(true))
+                {
+                    // set size succeeded. The source and destination are valid. Start actual sync
+                    MainForm.WriteTrace("Starting actual publish for: {0} in Thread {1}", operation.LocalSite.SiteName, Thread.CurrentThread.ManagedThreadId);
                     operation.Publish(false);
                 }
             }
@@ -127,6 +148,12 @@ namespace CompatCheckAndMigrate.Helpers
                 lock (this._completedOperationsLock)
                 {
                     operation.LogTrace("Enqueueing completed operation for: {0} in Thread {1}", operation.LocalSite.SiteName, Thread.CurrentThread.ManagedThreadId);
+            }
+            finally
+            {
+                lock (_completedOperations)
+                {
+                    MainForm.WriteTrace("Enqueueing completed operation for: {0} in Thread {1}", operation.LocalSite.SiteName, Thread.CurrentThread.ManagedThreadId);
                     _completedOperations.Enqueue(operation);
                 }
             }
@@ -138,12 +165,14 @@ namespace CompatCheckAndMigrate.Helpers
             if (operation == null)
             {
                 TraceHelper.Tracer.WriteTrace("Publish: Thread {0} did not find any operations to process although got scheduled", Thread.CurrentThread.ManagedThreadId);
+                MainForm.WriteTrace("Publish: Thread {0} did not find any operations to process although got scheduled", Thread.CurrentThread.ManagedThreadId);
                 return;
             }
 
             try
             {
                 TraceHelper.Tracer.WriteTrace("Starting db publish for: {0} in Thread {1}", operation.LocalSite.SiteName, Thread.CurrentThread.ManagedThreadId);
+                MainForm.WriteTrace("Starting db publish for: {0} in Thread {1}", operation.LocalSite.SiteName, Thread.CurrentThread.ManagedThreadId);
                 operation.Publish(false);
             }
             catch (Exception ex)
@@ -156,6 +185,7 @@ namespace CompatCheckAndMigrate.Helpers
                 lock (_completedOperations)
                 {
                     TraceHelper.Tracer.WriteTrace("Enqueueing completion for: {0} in Thread {1}", operation.LocalSite.SiteName, Thread.CurrentThread.ManagedThreadId);
+                    MainForm.WriteTrace("Enqueueing completion for: {0} in Thread {1}", operation.LocalSite.SiteName, Thread.CurrentThread.ManagedThreadId);
                     _completedOperations.Enqueue(operation);
                 }
             }

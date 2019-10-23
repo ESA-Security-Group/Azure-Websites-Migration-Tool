@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 
@@ -123,6 +124,7 @@ namespace CompatCheckAndMigrate.Controls
             this.DbStatusBox.Location = new System.Drawing.Point(47, 51);
             this.DbStatusBox.Name = "DbStatusBox";
             this.DbStatusBox.Size = new System.Drawing.Size(26, 26);
+            this.DbStatusBox.Size = new System.Drawing.Size(26, 30);
             this.DbStatusBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
             this.DbStatusBox.TabIndex = 5;
             this.DbStatusBox.TabStop = false;
@@ -135,6 +137,7 @@ namespace CompatCheckAndMigrate.Controls
             this.SiteStatusBox.Location = new System.Drawing.Point(47, 23);
             this.SiteStatusBox.Name = "SiteStatusBox";
             this.SiteStatusBox.Size = new System.Drawing.Size(26, 26);
+            this.SiteStatusBox.Size = new System.Drawing.Size(26, 25);
             this.SiteStatusBox.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
             this.SiteStatusBox.TabIndex = 1;
             this.SiteStatusBox.TabStop = false;
@@ -181,5 +184,6 @@ namespace CompatCheckAndMigrate.Controls
         private System.Windows.Forms.Label dbStatusMessage;
         private System.Windows.Forms.PictureBox DbStatusBox;
         public System.Windows.Forms.ProgressBar siteProgressBar;
+        private System.Windows.Forms.ProgressBar siteProgressBar;
     }
 }

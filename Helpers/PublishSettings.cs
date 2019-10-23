@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 
@@ -51,6 +52,7 @@ namespace CompatCheckAndMigrate.Helpers
         public PublishSettings(string filePathOrXml, string siteName): this(filePathOrXml, siteName, null) {}
 
         public PublishSettings(string filePathOrXml, string siteName, string serverName)
+        public PublishSettings(string filePathOrXml, string siteName)
         {
             _sqlDbConnectionString = new SqlConnectionStringBuilder();
             ParseErrors = new StringBuilder();
@@ -74,6 +76,7 @@ namespace CompatCheckAndMigrate.Helpers
                     string message = "Invalid Publish Settings File: " + ex.ToString();
                     MessageBox.Show(message);
                     TraceHelper.Tracer.WriteTrace(message);
+                    MessageBox.Show("Invalid Publish Settings File: " + ex.ToString());
                 }
             }
 
@@ -87,6 +90,7 @@ namespace CompatCheckAndMigrate.Helpers
                 {
                     this.Load(doc.CreateNavigator(), siteName);
                 }
+                Load(doc.CreateNavigator(), siteName);
             }
         }
 

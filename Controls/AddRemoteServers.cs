@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -23,7 +23,10 @@ namespace CompatCheckAndMigrate.Controls
 
         public void SetState(object state, bool isNavigatingBack = false)
         {
-            tbxComputerName.Enabled = tbxPassword.Enabled = tbxUsername.Enabled = cbxDrive.Enabled = false;
+<<<            tbxComputerName.Enabled = tbxPassword.Enabled = tbxUsername.Enabled = cbxDrive.Enabled = false;
+>>>>>>>+HEAD
+====
+>>>>>>> 1df93e2... First commit to git of the Azure Websites Migration Tool
             this.tbxUsername.Items.Clear();
             if (state != null && (bool) state)
             {
@@ -34,19 +37,33 @@ namespace CompatCheckAndMigrate.Controls
                 this.useScom = false;
             }
 
-            TraceHelper.Tracer.WriteTrace("in set state remote");
+<<<            TraceHelper.Tracer.WriteTrace("in set state remote");
             cbxDrive.SelectedIndex = 0;
             if (this.useScom)
             {
                 // RemoteSystemInfos.Servers = new Dictionary<string, RemoteSystemInfo>();
-                this.busyMessageLabel.Text = "Reading servers from SCOM";
+>>>>>>>+HEAD
+====
+               MainForm.WriteTrace("in set state remote");
+            cbxDrive.SelectedIndex = 0;
+            // select local by default
+            tbxComputerName.Enabled = tbxPassword.Enabled = tbxUsername.Enabled = cbxDrive.Enabled = true;
+
+            if (this.useScom)
+            {
+                RemoteSystemInfos.Servers = new Dictionary<string, RemoteSystemInfo>();
+>>>>>>>+1df93e2
+             this.busyMessageLabel.Text = "Reading servers from SCOM";
                 this.busyMessageLabel.Visible = this.busyPictureBox.Visible = true;
                 AddScomServers();
             }
             else
             {
-                // select local by default
+<<<                // select local by default
                 tbxComputerName.Enabled = tbxPassword.Enabled = tbxUsername.Enabled = cbxDrive.Enabled = true;
+>>>>>>>+HEAD
+====
+>>>>>>> 1df93e2... First commit to git of the Azure Websites Migration Tool
                 this.busyMessageLabel.Visible = this.busyPictureBox.Visible = false;
             }
         }
@@ -78,7 +95,8 @@ namespace CompatCheckAndMigrate.Controls
 
         private void AddScomServers()
         {
-            _worker = new BackgroundWorker();
+               //Runspace runspace = RunspaceFactory.CreateRunspace();
+         _worker = new BackgroundWorker();
             btnConnect.Enabled = false;
             _worker.DoWork += (object doWorkSender, DoWorkEventArgs doWorkEventArgs) =>
             {
@@ -90,9 +108,14 @@ namespace CompatCheckAndMigrate.Controls
                 this.scomCompleted = true;
                 // Hide loading gif.
                 this.busyMessageLabel.Visible = this.busyPictureBox.Visible = false;
-                btnConnect.Enabled = true;
+<<<                btnConnect.Enabled = true;
                 tbxComputerName.Enabled = tbxPassword.Enabled = tbxUsername.Enabled = cbxDrive.Enabled = true;
-                if (runWorkerCompletedEventArgs.Error != null)// || !connectionSuccessful)
+>>>>>>>+HEAD
+====
+                   tbxComputerName.Enabled = tbxUsername.Enabled = tbxPassword.Enabled = cbxDrive.Enabled = true;
+                btnConnect.Enabled = true;
+>>>>>>>+1df93e2
+             if (runWorkerCompletedEventArgs.Error != null)// || !connectionSuccessful)
                 {
                     string message = runWorkerCompletedEventArgs.Error != null ? runWorkerCompletedEventArgs.Error.Message : "Could not connect to the computer specified with the credentials supplied";
                     MessageBox.Show(message, System.Windows.Forms.Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -114,9 +137,13 @@ namespace CompatCheckAndMigrate.Controls
                 foreach (var computerName in result)
                 {
                     string key = this.CredentialsRequiredPrefix + computerName;
-                    if (!RemoteSystemInfos.Servers.ContainsKey(computerName.ToString()) && 
+<<<                    if (!RemoteSystemInfos.Servers.ContainsKey(computerName.ToString()) && 
                         !this.serverList.Items.Contains(key) && !this.serverList.Items.Contains(computerName.ToString()))
-                    {
+>>>>>>>+HEAD
+====
+                       if (!RemoteSystemInfos.Servers.ContainsKey(computerName.ToString()) && !this.serverList.Items.Contains(key))
+>>>>>>>+1df93e2
+                 {
                         this.serverList.Items.Add(key);
                         RemoteSystemInfos.AddOrUpdateEmptyServer(key, computerName.ToString());
                     }
@@ -286,6 +313,84 @@ namespace CompatCheckAndMigrate.Controls
 
                 _worker.RunWorkerAsync();
             }
+            string computerName = tbxComputerName.Text;
+            if (computerName == null)
+            {
+                return;
+            }
+
+            if (RemoteSystemInfos.Servers.ContainsKey(computerName))
+            {
+                MessageBox.Show(string.Format("Server already added: {0}\nDelete to re-add", computerName));
+                return;
+            }
+
+            if (RemoteSystemInfos.EmptyServers.ContainsKey(this.CredentialsRequiredPrefix + computerName))
+            {
+                RemoteSystemInfos.EmptyServers.Remove(this.CredentialsRequiredPrefix + computerName);
+                this.serverList.Items.Remove(this.CredentialsRequiredPrefix + computerName);
+            }
+
+            string username = tbxUsername.Text;
+            string password = tbxPassword.Text;
+            string driveLetter = cbxDrive.Text;
+
+            busyMessageLabel.Text = "Trying to connect to " + computerName;
+            busyMessageLabel.Visible = busyPictureBox.Visible = true;
+            tbxComputerName.Enabled = tbxUsername.Enabled = tbxPassword.Enabled = cbxDrive.Enabled = false;
+            _worker = new BackgroundWorker();
+            btnConnect.Enabled = false;
+
+            _worker.DoWork += (object doWorkSender, DoWorkEventArgs doWorkEventArgs) =>
+            {
+                if (!string.IsNullOrEmpty(computerName) && Helper.IsComputerReachable(computerName))
+                {
+                    doWorkEventArgs.Result = Helper.ConnectToServer(computerName, username, password);
+                }
+            };
+
+            _worker.RunWorkerCompleted += (object runWorkerCompletedSender, RunWorkerCompletedEventArgs runWorkerCompletedEventArgs) =>
+            {
+                // Hide busy animation.
+                this.busyPictureBox.Visible = this.busyMessageLabel.Visible = false;
+                tbxComputerName.Enabled = tbxUsername.Enabled = tbxPassword.Enabled = cbxDrive.Enabled = true;
+                btnConnect.Enabled = true;
+                if (runWorkerCompletedEventArgs.Error != null)// || !connectionSuccessful)
+                {
+                    string message = runWorkerCompletedEventArgs.Error != null ? runWorkerCompletedEventArgs.Error.Message : "Could not connect to the computer specified with the credentials supplied";
+                    MessageBox.Show(message, System.Windows.Forms.Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                    return;
+                }
+
+                bool result = runWorkerCompletedEventArgs.Result != null && (bool) runWorkerCompletedEventArgs.Result;
+                if (!result)
+                {
+                    MessageBox.Show("Unable to connect to server", System.Windows.Forms.Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                    return;
+                }
+                
+                this.tbxUsername.Items.Add(username);
+                autoCompleteStringCollection.Add(username);
+                this.tbxUsername.AutoCompleteCustomSource = autoCompleteStringCollection;
+                RemoteSystemInfos.AddOrUpdate(computerName, username, password, driveLetter);
+
+                var remoteSystemInfo = RemoteSystemInfos.Servers[computerName];
+                if (remoteSystemInfo.IISVersion >= 7 && Helper.IisVersion < 7)
+                {
+                    MessageBox.Show(
+                        "To migrate sites on a web server 7 and higher, run the tool from a system running Vista or above. ",
+                        System.Windows.Forms.Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    RemoteSystemInfos.Servers.Remove(computerName);
+                }
+                else
+                {
+                    this.serverList.Items.Add(computerName);
+                }
+            };
+
+            _worker.RunWorkerAsync();
         }
 
         private void serverList_SelectedIndexChanged(object sender, EventArgs e)
@@ -347,6 +452,26 @@ namespace CompatCheckAndMigrate.Controls
 
                 this.serverList.Items.Remove(selectedItem);
             }
+            string selectedItem = (string) this.serverList.SelectedItem;
+            if (selectedItem == null)
+            {
+                return;
+            }
+
+            if (RemoteSystemInfos.EmptyServers.ContainsKey(selectedItem))
+            {
+                RemoteSystemInfos.EmptyServers.Remove(selectedItem);
+            }
+
+            RemoteSystemInfo remoteSystemInfo = null;
+            RemoteSystemInfos.Servers.TryGetValue(selectedItem, out remoteSystemInfo);
+            if (remoteSystemInfo != null)
+            {
+                RemoteSystemInfos.Servers.Remove(remoteSystemInfo.ComputerName);
+                this.autoCompleteStringCollection.Remove(remoteSystemInfo.Username);
+            }
+
+            this.serverList.Items.Remove(selectedItem);
         }
 
         private void btnBack_Click(object sender, EventArgs e)

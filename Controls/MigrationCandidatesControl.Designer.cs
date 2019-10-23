@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 
@@ -120,6 +121,10 @@ namespace CompatCheckAndMigrate.Controls
             this.codeplexRepoLinkLabel.TabIndex = 27;
             this.codeplexRepoLinkLabel.TabStop = true;
             this.codeplexRepoLinkLabel.Text = "GitHub repo";
+            this.codeplexRepoLinkLabel.Size = new System.Drawing.Size(76, 13);
+            this.codeplexRepoLinkLabel.TabIndex = 27;
+            this.codeplexRepoLinkLabel.TabStop = true;
+            this.codeplexRepoLinkLabel.Text = "CodePlex repo";
             this.codeplexRepoLinkLabel.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.codeplexRepoLinkLabel_LinkClicked);
             // 
             // label4

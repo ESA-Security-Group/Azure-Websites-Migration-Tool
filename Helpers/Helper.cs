@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 using System;
@@ -42,6 +43,7 @@ namespace CompatCheckAndMigrate.Helpers
                 // return 1;
                 return MigrationConstants.DefaultMaxPerProcessorThreadCount * Environment.ProcessorCount;
             }
+            get { return MigrationConstants.DefaultMaxPerProcessorThreadCount * Environment.ProcessorCount; }
         }
 
         public static bool IsComputerReachable(string computername)
@@ -54,6 +56,8 @@ namespace CompatCheckAndMigrate.Helpers
             catch (Exception ex)
             {
                 TraceHelper.Tracer.WriteTrace(ex.ToString());
+            catch (Exception)
+            {
             }
 
             return false;
@@ -144,6 +148,7 @@ namespace CompatCheckAndMigrate.Helpers
                 string message = string.Format("Failed to download {0} from: {1} due to: {2}", filename, url, ex.ToString());
                 MessageBox.Show(message);
                 TraceHelper.Tracer.WriteTrace(message);
+                MessageBox.Show(string.Format("Failed to download {0} from: {1} due to: {2}", filename, url, ex.ToString()));
             }
 
             return path;
@@ -292,6 +297,9 @@ namespace CompatCheckAndMigrate.Helpers
             {
                 if (string.IsNullOrEmpty(_azureMigrationId))
                 {
+                    var remoteInfo = RemoteSystemInfos.Servers;
+                    // TODO: MAKE THIS WORK WITH MULTIPLE SERVERS
+                    // var systemName = remoteInfo != null ? remoteInfo.ComputerName : "localhost";
                     var systemName = "localhost";
                     _azureMigrationId = GetRegistryValue<string>(MigrationConstants.MigrationIDPath, systemName, string.Empty);
                     if (string.IsNullOrEmpty(_azureMigrationId))
@@ -373,6 +381,7 @@ namespace CompatCheckAndMigrate.Helpers
         public static string PostMigratePortal
         {
             get { return ConfigurationManager.AppSettings["PostMigratePortal"] ?? "https://migrate4.azurewebsites.net"; }
+            get { return ConfigurationManager.AppSettings["PostMigratePortal"] ?? "https://www.movemetothecloud.net"; }
         }
 
         public static string ScmSitePrimary
@@ -398,6 +407,7 @@ namespace CompatCheckAndMigrate.Helpers
         public static string CodePlexRepoLink
         {
             get { return ConfigurationManager.AppSettings["CodePlexRepoLink"] ?? "https://github.com/Azure/Azure-Websites-Migration-Tool"; }
+            get { return ConfigurationManager.AppSettings["CodePlexRepoLink"] ?? "http://websiteassist.codeplex.com"; }
         }
 
         public static string CompatApi
@@ -413,11 +423,13 @@ namespace CompatCheckAndMigrate.Helpers
         public static string SiteStatusApi
         {
             get { return ConfigurationManager.AppSettings["SiteStatusApi"] ?? "/api/sitemigration/{0}/sitename/{1}/"; }
+            get { return ConfigurationManager.AppSettings["SiteStatusApi"] ?? "/api/sitemigration/{0}/sitename/{1}"; }
         }
 
         public static string DbStatusApi
         {
             get { return ConfigurationManager.AppSettings["DbStatusApi"] ?? "/api/dbmigration/{0}/sitename/{1}/"; }
+            get { return ConfigurationManager.AppSettings["DbStatusApi"] ?? "/api/dbmigration/{0}/sitename/{1}"; }
         }
 
         public static string Results
@@ -439,6 +451,7 @@ namespace CompatCheckAndMigrate.Helpers
         {
             // get { return ConfigurationManager.AppSettings["DatabaseProvider"] ?? "dbDacFx"; }
             get { return ConfigurationManager.AppSettings["DatabaseProvider"] ?? "dbSqlFull"; }
+            get { return ConfigurationManager.AppSettings["DatabaseProvider"] ?? "dbDacFx"; }
         }
 
         public static string MWDAssembly
@@ -500,6 +513,41 @@ namespace CompatCheckAndMigrate.Helpers
             }
 
             return exceptionMsg;
+        public static string UpdateStatus(string sitename, bool dbStatus = false)
+        {
+            string url = string.Format(dbStatus ? DbStatusApi : SiteStatusApi, AzureMigrationId, sitename);
+            string baseAddress = UrlCombine(
+                PostMigratePortal,
+                url);
+            try
+            {
+
+                var req = (HttpWebRequest)HttpWebRequest.Create(baseAddress);
+                req.Method = "PUT";
+                req.ContentType = "application/json";
+                req.ContentLength = 0;
+
+                var response = (HttpWebResponse)req.GetResponse();
+                if (response.StatusCode != HttpStatusCode.OK && response.StatusCode != HttpStatusCode.NoContent)
+                {
+                    var message = new StringBuilder();
+                    message.AppendFormat("Client: Receive Response HTTP/{0} {1} {2}\r\n", response.ProtocolVersion, (int)response.StatusCode, response.StatusDescription);
+                    if (response.ContentLength > 0)
+                    {
+                        using (var r = new StreamReader(response.GetResponseStream()))
+                        {
+                            message.AppendLine(r.ReadToEnd());
+                        }
+                    }
+                    return message.ToString();
+                }
+            }
+            catch (Exception ex)
+            {
+                return ex.ToString();
+            }
+
+            return string.Empty;
         }
 
         public static bool IsWebDeployInstalled
@@ -564,6 +612,8 @@ namespace CompatCheckAndMigrate.Helpers
         {
             get
             {return Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            {
+                return Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
             }
         }
 
@@ -576,6 +626,8 @@ namespace CompatCheckAndMigrate.Helpers
                                       + "set-location 'localhost';"
                                       + "Get-RemotelyManagedComputer | %{$_.name};"
                                       + "Get-Agent | %{$_.name};";
+            string getServersScript = "Import-Module OperationsManager;";
+            getServersScript += "Get-ScomAgent | %{$_.DisplayName}; ";
             return RunCommand(getServersScript, null);
         }
 
@@ -604,6 +656,7 @@ namespace CompatCheckAndMigrate.Helpers
                     catch (Exception ex)
                     {
                         TraceHelper.Tracer.WriteTrace(ex.ToString());
+                        // MessageBox.Show(ex.ToString());
                     }
                 }
 

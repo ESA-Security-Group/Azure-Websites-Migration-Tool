@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 
@@ -88,6 +89,10 @@ namespace CompatCheckAndMigrate.Helpers
 
             _writer.WriteLine(DateTime.Now + " : " + message);
             TraceHelper.Tracer.WriteTrace(message);
+            }
+
+            _writer.WriteLine(message);
+            MainForm.WriteTrace(message);
         }
 
         public void TraceEventHandler(object sender, DeploymentTraceEventArgs traceEvent)
@@ -102,6 +107,7 @@ namespace CompatCheckAndMigrate.Helpers
             if (ChangedEvent != null)
             {
                 _control.UpdateProgressbar(this.LocalSite.ServerName + this.LocalSite.SiteName);
+                _control.UpdateProgressbar(this.LocalSite.SiteName);
             }
             else
             {
@@ -199,6 +205,8 @@ namespace CompatCheckAndMigrate.Helpers
 
 
 
+                }
+
                 manifest.WriteEndElement();
             }
 
@@ -289,12 +297,18 @@ namespace CompatCheckAndMigrate.Helpers
                         else
                         {
                             _control.SetProgressbarMax(this.LocalSite.ServerName + this.LocalSite.SiteName, summary.TotalChanges);
+                            Helper.UpdateStatus(_localSite.SiteName);
+                        }
+                        else
+                        {
+                            _control.SetProgressbarMax(_localSite.SiteName, summary.TotalChanges);
                         }
                     }
                     catch (Exception ex)
                     {
                         string message = string.Format("Error syncing content for site: {0}", _localSite.SiteName);
                         LogTrace(message);
+                        LogTrace("Error syncing content for site: {0}", _localSite.SiteName);
                         LogTrace(ex.ToString());
                         publishSucceeded = false;
                     }
@@ -314,6 +328,7 @@ namespace CompatCheckAndMigrate.Helpers
             if (!setSize)
             {
                 _control.SetContentPublished(this.LocalSite.ServerName + this.LocalSite.SiteName, publishSucceeded);
+                _control.SetContentPublished(this._localSite.SiteName, publishSucceeded);
             }
 
             this.PublishStatus = publishSucceeded;
@@ -361,6 +376,7 @@ namespace CompatCheckAndMigrate.Helpers
                 if (connectionBuilder.IntegratedSecurity)
                 {
                     TraceHelper.Tracer.WriteTrace("Using trusted connection");
+                    MainForm.WriteTrace("Using trusted connection");
                     return true;
                 }
             }
@@ -371,6 +387,9 @@ namespace CompatCheckAndMigrate.Helpers
             }
 
             TraceHelper.Tracer.WriteTrace("Not using trusted conn");
+            }
+
+            MainForm.WriteTrace("Not using trusted conn");
             return false;
         }
 
@@ -378,6 +397,7 @@ namespace CompatCheckAndMigrate.Helpers
         {
             bool publishSucceeded = true;
             this.LogTrace("Starting db publish for {0}", _localSite.SiteName);
+            MainForm.WriteTrace("Starting db publish for {0}", _localSite.SiteName);
             try
             {
                 var providerOption = new DeploymentProviderOptions(provider);
@@ -393,6 +413,7 @@ namespace CompatCheckAndMigrate.Helpers
                         catch (Exception ex)
                         {
                             this.LogTrace("Error trying to set value: {0} for setting: {1}, {2}", setting, providerSetting.Name, ex.ToString());
+                            MainForm.WriteTrace("Error trying to set value: {0} for setting: {1}, {2}", setting, providerSetting.Name, ex.ToString());
                         }
                     }
                 }
@@ -409,6 +430,11 @@ namespace CompatCheckAndMigrate.Helpers
                 if (RemoteSystemInfos.Servers.Any() && UseTrustedConnection(_localSite.Databases[0].DBConnectionString))
                 {
                     remoteSystemInfo = RemoteSystemInfos.Servers[_localSite.ServerName];
+                // TODO: MAKE THIS WORK WITH MULTIPLE SERVERS
+                var remoteSystemInfo = RemoteSystemInfos.Servers.Values.First();
+                if (!UseTrustedConnection(_localSite.Databases[0].DBConnectionString))
+                {
+                    remoteSystemInfo = null;
                 }
 
                 using (Impersonator.ImpersonateUser(remoteSystemInfo))
@@ -420,6 +446,8 @@ namespace CompatCheckAndMigrate.Helpers
                         LogTrace("Starting DB Sync for: {0} using {1}",
                             (string)_localSite.Databases[0].DbConnectionStringBuilder["Initial Catalog"], provider);
                         this.LogTrace("Publishing database as: {0}", destBaseOptions.UserName);
+                            _localSite.Databases[0].DbConnectionStringBuilder.InitialCatalog, provider);
+                        LogTrace("Publishing database as: {0}", destBaseOptions.UserName);
 
                         try
                         {
@@ -427,6 +455,8 @@ namespace CompatCheckAndMigrate.Helpers
                                 destBaseOptions, new DeploymentSyncOptions());
                             this.LogTrace("DB Synced successfully");
                             Helper.UpdateStatus(_localSite.SiteName, _localSite.ServerName, true);
+                            LogTrace("DB Synced successfully");
+                            Helper.UpdateStatus(_localSite.SiteName, true);
                         }
                         catch (Exception ex)
                         {
@@ -435,6 +465,9 @@ namespace CompatCheckAndMigrate.Helpers
                                 LogTrace("Error starting publish for db: {0}",
                                             (string)_localSite.Databases[0].DbConnectionStringBuilder["Initial Catalog"]);
                                 this.LogTrace(ex.ToString());
+                                LogTrace("Error syncing db: {0}",
+                                    _localSite.Databases[0].DbConnectionStringBuilder.InitialCatalog);
+                                LogTrace(ex.ToString());
                             }
 
                             publishSucceeded = false;
@@ -448,6 +481,8 @@ namespace CompatCheckAndMigrate.Helpers
                 {
                     LogTrace("Error syncing db: {0}",
                                     (string)_localSite.Databases[0].DbConnectionStringBuilder["Initial Catalog"]);
+                    LogTrace("Error starting publish for db: {0}",
+                                            _localSite.Databases[0].DbConnectionStringBuilder.InitialCatalog);
                     LogTrace(ex.ToString());
                 }
 
@@ -478,6 +513,13 @@ namespace CompatCheckAndMigrate.Helpers
             }
 
             _control.SetDbPublished(this.LocalSite.ServerName + this.LocalSite.SiteName, publishSucceeded);
+            publishSucceeded = PublishDatabase(sourceBaseOptions, destBaseOptions, "dbDacfx", false);
+            if (!publishSucceeded)
+            {
+                publishSucceeded = PublishDatabase(sourceBaseOptions, destBaseOptions, "dbfullsql", true);
+            }
+
+            _control.SetDbPublished(_localSite.SiteName, publishSucceeded);
             _control.UpdateStatusLabel(string.Empty);
 
             this.PublishStatus = publishSucceeded;

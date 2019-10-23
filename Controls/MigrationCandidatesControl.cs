@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 
@@ -34,6 +35,7 @@ namespace CompatCheckAndMigrate.Controls
 
         public void SetState(object state, bool isNavigatingBack = false)
         {
+            this.Sites = new Dictionary<string, Site>();
             this.IISServers = new IISServers();
             ProcessIISInfo();
         }
@@ -119,6 +121,65 @@ namespace CompatCheckAndMigrate.Controls
                 selectedDatabase.ParentSite = null; //prevent recursion during serialization
                 site.Add(selectedDatabase);
                 
+        public Dictionary<string, Site> Sites = new Dictionary<string, Site>();
+
+        private void GetSelectedSites()
+        {
+            if (this.siteTree.Nodes.Count == 0)
+            {
+                return;
+            }
+
+            List<Site> selectedSites = new List<Site>();
+            this.GetAllSelectedSites(this.siteTree.Nodes[0], selectedSites);
+            var applicationPools = new Dictionary<string, ApplicationPool>();
+            // reset the sites and AppPools for each server
+            foreach (var server in this.IISServers.Servers.Values)
+            {
+                server.Sites = new List<Site>();
+                foreach (var applicationPool in server.AppPools)
+                {
+                    applicationPools.Add(server.Name + applicationPool.Name, applicationPool);
+                }
+
+                server.AppPools = new List<ApplicationPool>();
+            }
+
+            // only add the selectedSites and AppPools
+            foreach (var selectedSite in selectedSites)
+            {
+                this.IISServers.Servers[selectedSite.ServerName].Sites.Add(selectedSite);
+                // add site AppPool
+                this.AddApplicationPool(applicationPools[selectedSite.ServerName + selectedSite.AppPoolName], selectedSite.ServerName);
+                foreach (var application in selectedSite.Applications)
+                {
+                    // Add AppPool for each application
+                    this.AddApplicationPool(applicationPools[selectedSite.ServerName + application.AppPoolName], selectedSite.ServerName);
+                }
+            }
+        }
+
+        private void AddApplicationPool(ApplicationPool applicationPoolToAdd, string serverName)
+        {
+            if (!this.IISServers.Servers[serverName].AppPools.Contains(applicationPoolToAdd))
+            {
+                this.IISServers.Servers[serverName].AppPools.Add(applicationPoolToAdd);
+            }
+        }
+
+        private void GetAllSelectedSites(TreeNode treeNode, List<Site> sites)
+        {
+            if (treeNode.Nodes.Count == 0 && treeNode.Checked)
+            {
+                // checked site node
+                sites.Add(this.Sites[treeNode.Name]);
+            }
+            else
+            {
+                foreach (TreeNode node in treeNode.Nodes)
+                {
+                    this.GetAllSelectedSites(node, sites);
+                }
             }
         }
 
@@ -155,6 +216,8 @@ namespace CompatCheckAndMigrate.Controls
                         {
                             readers.Add(Helper.GetIISInfoReader(Helper.AzureMigrationId, remoteSystemInfo));
                         }
+                        // Do actual work here.
+                        readers.Add(Helper.GetIISInfoReader(Helper.AzureMigrationId, remoteSystemInfo));
                     }
                 }
                 else
@@ -193,6 +256,14 @@ namespace CompatCheckAndMigrate.Controls
                     
                     var rootNode = this.siteTree.Nodes.Add("Root", "Migration Candidates", 0, 0);
 
+                        Helper.ShowErrorMessageAndExit("IIS Configuration could not be read. Please re run the tool");
+                    }
+
+                    // this.websitesCheckedListBox.Items.Clear();
+                    this.siteTree.Nodes.Clear();
+                    this.siteTree.CheckBoxes = true;
+                    var rootNode = this.siteTree.Nodes.Add("Root", "Migration Candidates", 0, 0);
+                    rootNode.Checked = true;
                     // Get result from the async task.
                     List<IISInfoReader> readers = (List<IISInfoReader>) runWorkerCompletedEventArgs.Result;
 
@@ -214,6 +285,8 @@ namespace CompatCheckAndMigrate.Controls
                                                                 7);
                             serverNode.Tag = reader.Server;
 
+                            var serverNode = rootNode.Nodes.Add("Server", string.Format("Web Server: {0}", reader.Server.Name), 7, 7);
+                            serverNode.Checked = true;
                             // Display candidate web sites
                             foreach (Site site in reader.Server.Sites)
                             {
@@ -238,6 +311,11 @@ namespace CompatCheckAndMigrate.Controls
                                     Tag = "AddDB",Checked=false
                                 });
                                 serverNode.Nodes.Add(siteNode);
+                                // We rely on Site::ToString() to display the name of the site.
+                                // this.websitesCheckedListBox.Items.Add(site, CheckState.Checked);
+                                TreeNode siteNode = serverNode.Nodes.Add(site.ServerName + site.SiteName, site.SiteName, 1, 1);
+                                this.Sites.Add(site.ServerName + site.SiteName, site);
+                                siteNode.Checked = true;
                             }
                         }
                     }
@@ -441,6 +519,47 @@ namespace CompatCheckAndMigrate.Controls
                     }
                 }
                 this.StartButton.Enabled = (0 != selectedObjs.SelectedSites.Count());
+        public List<Site> SelectedSites = new List<Site>();
+
+        private void siteTree_AfterCheck(object sender, TreeViewEventArgs e)
+        {
+            if (e.Node.Nodes.Count > 0)
+            {
+                this.CheckAllChildNodes(e.Node, e.Node.Checked);
+            }
+
+            if (this.siteTree.Nodes.Count > 0)
+            {
+                this.StartButton.Enabled = this.AtLeastOneChecked(this.siteTree.Nodes[0]);
+            }
+            //var site = this.Sites.Values.First();
+            //this.SelectedSites.Add(site);
+        }
+
+        private bool AtLeastOneChecked(TreeNode treeNode)
+        {
+            bool oneChecked = false;
+            foreach (TreeNode node in treeNode.Nodes)
+            {
+                if (node.Checked && node.Nodes.Count == 0)
+                {
+                    return true;
+                }
+
+                oneChecked |= this.AtLeastOneChecked(node);
+            }
+
+            return oneChecked;
+        }
+
+        private void CheckAllChildNodes(TreeNode treeNode, bool nodeChecked)
+        {
+            foreach (TreeNode node in treeNode.Nodes)
+            {
+                node.Checked = nodeChecked;
+                // If the current node has child nodes, call the
+                // CheckAllChildNodes method recursively.
+                this.CheckAllChildNodes(node, nodeChecked);
             }
         }
     }

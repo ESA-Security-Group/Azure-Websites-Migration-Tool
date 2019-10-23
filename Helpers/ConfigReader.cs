@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 using System;
@@ -198,6 +199,7 @@ namespace CompatCheckAndMigrate.Helpers
                             @"inetsrv\config\applicationhost.config");
             var rootDefaultDocList = GetDefaultDocuments(userApphostConfig);
             CheckSessionState(userApphostConfig, Server);
+            var rootDefaultDocList = GetDefaultDocuments(_appHostConfigPath);
 
             using (ServerManager manager = GetServerManager())
             {
@@ -307,6 +309,9 @@ namespace CompatCheckAndMigrate.Helpers
                             site.Add(new Application(application.Path, appPhysicalPath)
                             {
                                 AppPoolName = application.ApplicationPoolName, VDirs = listVdirs
+                            site.Add(new Application(application.Path, appPhysicalPath)
+                            {
+                                AppPoolName = application.ApplicationPoolName
                             });
 
                             if (appPhysicalPath == "/")
@@ -384,6 +389,7 @@ namespace CompatCheckAndMigrate.Helpers
                 if (!antaresConfigSections.Contains(customerSection))
                 {
                     string message = string.Format("Section definition not supported for {0}", customerSection);
+                    string message = string.Format("Missing section definition for {0}", customerSection);
                     server.SchemaCheckErrors.Add(message);
                 }
 
@@ -414,6 +420,9 @@ namespace CompatCheckAndMigrate.Helpers
                 if (antaresDoc.SelectNodes(attributeSectionPath).Count < 1 && !attribute.Name.Equals("lockAttributes"))
                 {
                     string message = string.Format("Attribute {0} not supported for {1}", attribute.Name, sectionPath);
+                if (antaresDoc.SelectNodes(attributeSectionPath).Count < 1)
+                {
+                    string message = string.Format("Missing attribute definition {0} for {1}", attribute.Name, sectionPath);
                     server.SchemaCheckErrors.Add(message);
                 }
             }

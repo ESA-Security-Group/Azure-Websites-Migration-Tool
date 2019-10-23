@@ -1,4 +1,4 @@
-﻿namespace CompatCheckAndMigrate.Controls
+namespace CompatCheckAndMigrate.Controls
 {
     partial class SiteStatusControl
     {
@@ -43,6 +43,7 @@
             this.statusPanel.Location = new System.Drawing.Point(37, 27);
             this.statusPanel.Name = "statusPanel";
             this.statusPanel.Size = new System.Drawing.Size(742, 361);
+            this.statusPanel.Size = new System.Drawing.Size(1031, 361);
             this.statusPanel.TabIndex = 32;
             // 
             // btnClose
@@ -53,6 +54,7 @@
             this.btnClose.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.btnClose.ForeColor = System.Drawing.Color.White;
             this.btnClose.Location = new System.Drawing.Point(674, 409);
+            this.btnClose.Location = new System.Drawing.Point(963, 409);
             this.btnClose.Name = "btnClose";
             this.btnClose.Size = new System.Drawing.Size(105, 41);
             this.btnClose.TabIndex = 35;
@@ -101,6 +103,7 @@
             this.Controls.Add(this.statusPanel);
             this.Name = "SiteStatusControl";
             this.Size = new System.Drawing.Size(822, 475);
+            this.Size = new System.Drawing.Size(1111, 475);
             this.Load += new System.EventHandler(this.SiteStatusControl_Load);
             this.ResumeLayout(false);
 

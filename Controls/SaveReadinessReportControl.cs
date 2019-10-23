@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 
@@ -46,6 +47,7 @@ namespace CompatCheckAndMigrate.Controls
             {
                 dialog.RootFolder = Environment.SpecialFolder.MyComputer;
                 dialog.Description = "Please provide the location to store the readiness report.";
+                dialog.Description = "Please provide the location where you readiness report will be stored.";
                 dialog.ShowNewFolderButton = true;
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {

@@ -1,4 +1,4 @@
-﻿namespace CompatCheckAndMigrate.Controls
+namespace CompatCheckAndMigrate.Controls
 {
     partial class ReadinessReportControl
     {
@@ -128,6 +128,9 @@
             this.label5.Size = new System.Drawing.Size(128, 13);
             this.label5.TabIndex = 12;
             this.label5.Text = "to upload to Azure later or";
+            this.label5.Size = new System.Drawing.Size(119, 13);
+            this.label5.TabIndex = 12;
+            this.label5.Text = "to upload to Azure later.";
             // 
             // siteTree
             // 
@@ -234,6 +237,7 @@
             this.Controls.Add(this.siteTree);
             this.Name = "ReadinessReportControl";
             this.Size = new System.Drawing.Size(763, 461);
+            // this.Load += new System.EventHandler(this.ReadinessReportControl_Load);
             this.busyPanel.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.ResumeLayout(false);

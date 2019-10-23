@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 
@@ -63,6 +64,27 @@ namespace CompatCheckAndMigrate.Controls
             }
 
             btnPublish.Visible = false;
+            }
+
+            btnPublish.Visible = false;
+
+            foreach (string url in Helper.UrlsForCookie)
+            {
+                Helper.InternetSetCookie(url, null, "AZMigrationTool = SkipHeaderAndFooter");
+            }
+
+            string urlToNavigate = Helper.UrlCombine(
+                     Helper.PostMigratePortal,
+                     Helper.Results,
+                     Helper.AzureMigrationId);
+            if (isNavigatingBack)
+            {
+                urlToNavigate = Helper.UrlCombine(Helper.ScmSitePrimary, "/picksubscription/index", Helper.AzureMigrationId);
+            }
+
+            siteBrowser.Navigate("about:blank");
+            siteBrowser.Navigate(urlToNavigate);
+            checkPublishSettingsTimer.Enabled = true;
         }
 
         private void siteBrowser_Navigated(object sender, WebBrowserNavigatedEventArgs e)
@@ -170,6 +192,58 @@ namespace CompatCheckAndMigrate.Controls
                     {
                         btnPublish.Visible = true;
                     }));
+                string outerHtml = null;
+
+                this.Invoke(new MethodInvoker(delegate()
+                {
+                    if (siteBrowser.Document != null)
+                    {
+                        var publishElement = siteBrowser.Document.GetElementById("publishprofile");
+                        if (publishElement != null)
+                        {
+                            outerHtml = publishElement.OuterHtml;
+                        }
+                    }
+                }));
+
+                if (!string.IsNullOrEmpty(outerHtml))
+                {
+                    try
+                    {
+                        string value = GetInputValue(outerHtml, false);
+                        if (!string.IsNullOrEmpty(value) &&
+                            value.Contains("publishProfile"))
+                        {
+                            checkPublishSettingsTimer.Enabled = false;
+                            Dictionary<string, string> errorMap = CheckSiteForError();
+                            string publishFilePath =
+                                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                                        Helper.AzureMigrationId + ".publishsettings");
+                            using (var writer = new StreamWriter(publishFilePath, false))
+                            {
+                                writer.WriteLine(value);
+                            }
+
+                            if (this.IISServers.Servers.Values.Any())
+                            {
+                                // TODO: FIX FOR MULTIPLE SERVERS / SCALE OUT
+                                this.IISServers.Servers.Values.First().SetPublishSetting(errorMap, value);
+
+                                this.btnPublish.Invoke(new MethodInvoker(delegate()
+                                {
+                                    btnPublish.Visible = true;
+                                }));
+                            }
+                            else
+                            {
+                                Helper.ShowErrorMessageAndExit("Some Error occurred: No sites found to publish");
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.ToString());
+                    }
                 }
             }
             catch (Exception ex)
@@ -188,6 +262,46 @@ namespace CompatCheckAndMigrate.Controls
                 foreach (var server in this.IISServers.Servers.Values)
                 {
                     server.SetPublishSetting(this.errorMap, this.publishSettings, server.Name);
+                string outerHtml = null;
+
+                this.Invoke(new MethodInvoker(delegate()
+                {
+                    if (siteBrowser.Document != null)
+                    {
+                        var publishElement = siteBrowser.Document.GetElementById("publishprofile");
+                        if (publishElement != null)
+                        {
+                            outerHtml = publishElement.OuterHtml;
+                        }
+                    }
+                }));
+
+                if (!string.IsNullOrEmpty(outerHtml))
+                {
+                    try
+                    {
+                        string value = GetInputValue(outerHtml, false);
+                        if (!string.IsNullOrEmpty(value) &&
+                            value.Contains("publishProfile"))
+                        {
+                            checkPublishSettingsTimer.Enabled = false;
+                            Dictionary<string, string> errorMap = CheckSiteForError();
+                            string publishFilePath =
+                                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                                        Helper.AzureMigrationId + ".publishsettings");
+                            using (var writer = new StreamWriter(publishFilePath, false))
+                            {
+                                writer.WriteLine(value);
+                            }
+
+                            // TODO: FIX FOR MULTIPLE SERVERS / SCALE OUT
+                            this.IISServers.Servers.Values.First().SetPublishSetting(errorMap, value);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.ToString());
+                    }
                 }
             }
             catch (Exception ex)
@@ -264,6 +378,9 @@ namespace CompatCheckAndMigrate.Controls
             {
                 FireGoToEvent(WizardSteps.ReadinessReport, this.IISServers);
             }
+        private void BackButton_Click(object sender, EventArgs e)
+        {
+            FireGoToEvent(WizardSteps.ReadinessReport, this.IISServers);
         }
     }
 }

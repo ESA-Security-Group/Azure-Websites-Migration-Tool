@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 
@@ -61,6 +62,7 @@ namespace CompatCheckAndMigrate.Helpers
             catch (Exception ex)
             {
                 TraceHelper.Tracer.WriteTrace(ex.ToString());
+                MainForm.WriteTrace(ex.ToString());
             }
 
             if (fileList.Any())

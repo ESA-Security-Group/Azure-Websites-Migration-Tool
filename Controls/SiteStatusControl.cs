@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -11,11 +11,13 @@ namespace CompatCheckAndMigrate.Controls
     public partial class SiteStatusControl : UserControl, IWizardStep
     {
         private IISServers IISServers;
+        private IISServer _server;
 
         public SiteStatusControl()
         {
             InitializeComponent();
             IISServers = null;
+            _server = null;
         }
 
         public event EventHandler<GoToWizardStepEventArgs> GoTo;
@@ -25,6 +27,7 @@ namespace CompatCheckAndMigrate.Controls
             if (state != null)
             {
                 this.IISServers = (IISServers)state;
+                this._server = (IISServer)state;
             }
         }
 
@@ -40,11 +43,13 @@ namespace CompatCheckAndMigrate.Controls
         private void btnFeedback_Click(object sender, EventArgs e)
         {
             FireGoToEvent(WizardSteps.FeedbackPage, this.IISServers);
+            FireGoToEvent(WizardSteps.FeedbackPage, this._server);
         }
 
         private void btnInstall_Click(object sender, EventArgs e)
         {
             FireGoToEvent(WizardSteps.InstallWebDeploy, this.IISServers);
+            FireGoToEvent(WizardSteps.InstallWebDeploy, this._server);
         }
 
         private void btnClose_Click(object sender, EventArgs e)
@@ -71,6 +76,16 @@ namespace CompatCheckAndMigrate.Controls
         private void button1_Click(object sender, EventArgs e)
         {
             Process.Start(TraceHelper.Tracer.TraceFile);
+        }
+            if (this._server != null)
+            {
+                foreach (var site in this._server.Sites.Where(s => s.PublishProfile != null && !string.IsNullOrEmpty(s.PublishProfile.SiteName)))
+                {
+                    var siteItem = new SiteItemControl(site.PublishProfile.SiteName, string.IsNullOrEmpty(site.SiteCreationError));
+                    siteItem.Dock = DockStyle.Top;
+                    statusPanel.Controls.Add(siteItem);
+                }
+            }
         }
     }
 }

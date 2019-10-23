@@ -1,4 +1,5 @@
-﻿// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Technologies, Inc.  All rights reserved. 
+// Copyright (c) Microsoft Open Technologies, Inc.  All rights reserved. 
 // Licensed under the Apache License, Version 2.0.  
 // See License.txt in the project root for license information.
 using System;
@@ -54,6 +55,7 @@ namespace CompatCheckAndMigrate.Helpers
                     MessageBox.Show(message, System.Windows.Forms.Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Error);
                     this.Error = true;
                     TraceHelper.Tracer.WriteTrace(message);
+                    throw new Exception("Unable to copy applicationhost.config", ex);
                 }
                 this.IISVersion = 7;
                 this.OSVersion = "6.1";
@@ -74,6 +76,8 @@ namespace CompatCheckAndMigrate.Helpers
                     TraceHelper.Tracer.WriteTrace(message);
                 }
 
+                    throw new Exception("Unable to copy metabase.xml", ex);
+                }
                 this.IISVersion = 6;
                 this.OSVersion = "5.2";
             }
@@ -86,6 +90,10 @@ namespace CompatCheckAndMigrate.Helpers
         }
 
         public static string LocalhostName = "localhost";
+
+                throw new Exception("IIS is not installed on the remote system");
+            }
+        }
 
         private RemoteSystemInfo()
         {
